@@ -7,3 +7,5 @@ Custom parts for the Micron Toolchanger, based on Stealthchanger
 Based on the Stealthchanger toolchanging system: https://github.com/DraftShift/StealthChanger/tree/main
 
 Parts from the Tapchanger project: https://github.com/viesturz/tapchanger/tree/main
+
+![alt text](https://github.com/AverageHedgehog/Micronchanger/blob/main/Pictures/micronchanger1.jpg?raw=true)
