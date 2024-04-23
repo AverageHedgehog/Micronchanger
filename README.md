@@ -10,7 +10,7 @@ Parts from the Tapchanger project: https://github.com/viesturz/tapchanger/tree/m
 
 Main Micron+ printer from hartk1213: https://github.com/PrintersForAnts/Micron
 
-DragShift discord: https://discord.gg/jJs73c6vSc
+DraftShift discord: https://discord.gg/jJs73c6vSc
 
 Hedgehog Makes discord: https://discord.gg/CQdCKrBrun
 
