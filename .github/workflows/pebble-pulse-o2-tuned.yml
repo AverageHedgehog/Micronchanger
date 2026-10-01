@@ -1,0 +1,89 @@
+name: Build Pulse O2 Tuned Time 2 Firmware
+
+on:
+  push:
+    branches:
+      - pebble-pulse-o2-build
+    paths:
+      - ".github/workflows/pebble-pulse-o2-tuned.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    container:
+      image: ghcr.io/coredevices/pebbleos-docker:v7
+
+    steps:
+      - name: Checkout build files
+        uses: actions/checkout@v7
+        with:
+          ref: pebble-pulse-o2-build
+          path: helper
+
+      - name: Checkout PebbleOS v4.38.4
+        uses: actions/checkout@v7
+        with:
+          repository: coredevices/PebbleOS
+          ref: v4.38.4
+          fetch-depth: 0
+          submodules: recursive
+          path: PebbleOS
+
+      - name: Mark repositories safe
+        run: |
+          git config --system --add safe.directory "$GITHUB_WORKSPACE/PebbleOS"
+          git config --system --add safe.directory "$GITHUB_WORKSPACE/helper"
+
+      - name: Install PebbleOS Python dependencies
+        working-directory: PebbleOS
+        run: |
+          pip install -U pip
+          pip install -r requirements.txt
+
+      - name: Install Pulse O2 source
+        run: cp helper/pebble-pulse-o2/spo2_test.c PebbleOS/src/fw/apps/demo/spo2_test/spo2_test.c
+
+      - name: Apply experimental SpO2 wrist tuning
+        run: python3 helper/tools-pulse-o2/apply_spo2_tuning.py
+
+      - name: Build slot 0
+        working-directory: PebbleOS
+        run: |
+          pbl -b build-slot0 configure --board obelix@pvt \
+            -DCONFIG_FIRMWARE_SLOT=0 \
+            -DCONFIG_RELEASE=y \
+            -DCONFIG_DEMO_APP_SPO2_TEST=y
+          pbl -b build-slot0 build
+          pbl -b build-slot0 bundle
+
+      - name: Build slot 1
+        working-directory: PebbleOS
+        run: |
+          pbl -b build-slot1 configure --board obelix@pvt \
+            -DCONFIG_FIRMWARE_SLOT=1 \
+            -DCONFIG_RELEASE=y \
+            -DCONFIG_DEMO_APP_SPO2_TEST=y
+          pbl -b build-slot1 build
+          pbl -b build-slot1 bundle
+
+      - name: Merge Time 2 OTA bundle
+        working-directory: PebbleOS
+        run: |
+          SLOT0=$(ls build-slot0/normal_obelix_pvt_*_slot0.pbz)
+          SLOT1=$(ls build-slot1/normal_obelix_pvt_*_slot1.pbz)
+          mkdir -p ../artifact
+          python3 tools/merge_pbz.py \
+            --slot0-pbz "$SLOT0" \
+            --slot1-pbz "$SLOT1" \
+            --output ../artifact/Pulse-O2-Time-2-Tuned-v4.38.4.pbz
+          cp build-slot0/pebbleos.elf ../artifact/Pulse-O2-Time-2-Tuned-slot0.elf
+          cp build-slot1/pebbleos.elf ../artifact/Pulse-O2-Time-2-Tuned-slot1.elf
+          cp ../helper/pebble-pulse-o2/spo2_test.c ../artifact/spo2_test.c
+          cp ../helper/tools-pulse-o2/apply_spo2_tuning.py ../artifact/apply_spo2_tuning.py
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: Pulse-O2-Time-2-Tuned-v4.38.4
+          path: artifact
