@@ -1,0 +1,1 @@
+Trigger Pulse O2 firmware build for Pebble Time 2.
