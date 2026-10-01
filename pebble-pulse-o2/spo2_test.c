@@ -145,7 +145,7 @@ static void prv_refresh_detail(AppData *data) {
              "Signal: %s\n"
              "Confidence: %" PRIu8 "  Valid: %" PRIu8 "\n"
              "Invalid: %s  Samples: %" PRIu32 "\n"
-             "History: %s",
+             "Accepted history: %s",
              prv_quality_string(data->last_quality), data->last_confidence, data->last_valid_level,
              data->last_invalid ? "yes" : "no", data->sample_count, history);
   } else if (data->history_count > 0) {
@@ -160,8 +160,8 @@ static void prv_refresh_detail(AppData *data) {
 
   text_layer_set_text(&data->detail_layer, data->detail_string);
   text_layer_set_text(&data->footer_layer,
-                      data->show_details ? "SELECT new reading   DOWN summary"
-                                         : "SELECT new reading   DOWN details");
+                      data->show_details ? "SELECT retry   DOWN summary"
+                                         : "SELECT retry   DOWN details");
 }
 
 static void prv_set_measuring(AppData *data) {
@@ -194,8 +194,17 @@ static void prv_update_from_spo2(AppData *data, const HRMSpO2Data *spo2) {
     snprintf(data->value_string, sizeof(data->value_string), "--");
     snprintf(data->status_string, sizeof(data->status_string), "Off wrist");
   } else if (!accepted) {
-    snprintf(data->value_string, sizeof(data->value_string), "--");
-    snprintf(data->status_string, sizeof(data->status_string), "Signal not accepted");
+    if (spo2->percent > 0) {
+      snprintf(data->value_string, sizeof(data->value_string), "%" PRIu8 "%%?", spo2->percent);
+    } else {
+      snprintf(data->value_string, sizeof(data->value_string), "--");
+    }
+    snprintf(data->status_string, sizeof(data->status_string), "Rejected C%" PRIu8 " V%" PRIu8,
+             spo2->confidence, spo2->valid_level);
+    // Automatically expose the diagnostic data on a rejected sample. The percent above is the
+    // algorithm's raw estimate only and is deliberately marked with '?' because invalid=true means
+    // PebbleOS must not treat it as a usable SpO2 reading.
+    data->show_details = true;
   } else {
     snprintf(data->value_string, sizeof(data->value_string), "%" PRIu8 "%%", spo2->percent);
     snprintf(data->status_string, sizeof(data->status_string), "%s signal",
